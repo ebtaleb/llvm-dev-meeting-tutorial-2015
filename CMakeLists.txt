@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 
 # LLVM detection part
 # The user is supposed to set this to a valid llvm 3.7 install root
-set(LLVM_ROOT "/media/jmbto/1decfa63-a052-4827-837e-f93d3d14e9d4/llvm/r" CACHE PATH "Root of LLVM install.")
+set(LLVM_ROOT "/media/jmbto/1decfa63-a052-4827-837e-f93d3d14e9d4/llvm/obj" CACHE PATH "Root of LLVM install.")
 #set(LLVM_ROOT "" CACHE PATH "Root of LLVM install.")
 
 # A bit of a sanity check:

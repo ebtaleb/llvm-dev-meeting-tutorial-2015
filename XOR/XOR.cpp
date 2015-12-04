@@ -43,33 +43,30 @@ namespace {
 
                     StoreInst *SI = dyn_cast<StoreInst>(IIT);
 
-                    // We do not apply the transformation to unnamed variables
-                    if (Inst.getOperand(1)->hasName()) {
-                        if (ConstantInt* CI = dyn_cast<ConstantInt>(Inst.getOperand(0))) {
-                            if (CI->getBitWidth() <= 32) {
-                                // Check if the value stored is zero
-                                if (CI->isZero()) {
+                    if (ConstantInt* CI = dyn_cast<ConstantInt>(Inst.getOperand(0))) {
+                        if (CI->getBitWidth() <= 32) {
+                            // Check if the value stored is zero
+                            if (CI->isZero()) {
 
-                                    // We insert instructions in the following form :
-                                    //
-                                    // %0 = load i32, i32* %var, align 4
-                                    // %1 = xor i32 %0, %0
-                                    // store i32 %1, i32* %var, align 4
+                                // We insert instructions in the following form :
+                                //
+                                // %0 = load i32, i32* %var, align 4
+                                // %1 = xor i32 %0, %0
+                                // store i32 %1, i32* %var, align 4
 
-                                    Value *var_ptr = Inst.getOperand(1);
-                                    Value *var_load = Builder.CreateAlignedLoad(var_ptr, SI->getAlignment());
-                                    Value *NewValue = Builder.CreateAlignedStore(
-                                            Builder.CreateXor(var_load,
-                                                var_load), var_ptr, SI->getAlignment());
-                                    ReplaceInstWithValue(BB.getInstList(), IIT, NewValue);
+                                Value *var_ptr = Inst.getOperand(1);
+                                Value *var_load = Builder.CreateAlignedLoad(var_ptr, SI->getAlignment());
+                                Value *NewValue = Builder.CreateAlignedStore(
+                                        Builder.CreateXor(var_load,
+                                            var_load), var_ptr, SI->getAlignment());
+                                ReplaceInstWithValue(BB.getInstList(), IIT, NewValue);
 
-                                    // Consecutive zero assignments causes instructions to be skipped.
-                                    // The instruciton iterator is decremented to avoid this.
-                                    --IIT;
+                                // Consecutive zero assignments causes some instructions to be skipped.
+                                // The instruction iterator is decremented to avoid this.
+                                --IIT;
 
-                                    modified = true;
-                                    XORCount = XORCount + 1;
-                                }
+                                modified = true;
+                                XORCount = XORCount + 1;
                             }
                         }
                     }
