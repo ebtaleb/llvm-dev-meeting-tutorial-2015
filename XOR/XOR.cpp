@@ -28,16 +28,12 @@ namespace {
                 for (auto IIT = BB.begin(), IE = BB.end(); IIT != IE; ++IIT) {
                     Instruction &Inst = *IIT;
 
-                    // We only target instructions in the form : store i32 0, i32* %var
-                    unsigned Opcode = Inst.getOpcode();
-                    if (Opcode != Instruction::Store) {
-                        continue;
-                    } else {
-                        DEBUG(dbgs() << Inst.getOperand(0)->getValueName() << "\n");
-                        DEBUG(dbgs() << Inst.getOperand(1)->getName() << "\n");
-                        DEBUG(dbgs() << Inst.getOperand(1)->getValueName() << "\n");
-                        DEBUG(dbgs() << "................" << "\n");
-                    }
+
+                    DEBUG(dbgs() << Inst.getOperand(0)->getValueName() << "\n");
+                    DEBUG(dbgs() << Inst.getNumOperands() << "\n");
+                    //DEBUG(dbgs() << Inst.getOperand(1)->getName() << "\n");
+                    //DEBUG(dbgs() << Inst.getOperand(1)->getValueName() << "\n");
+                    DEBUG(dbgs() << "................" << "\n");
 
                     IRBuilder<> Builder(&Inst);
 
@@ -48,22 +44,41 @@ namespace {
                             // Check if the value stored is zero
                             if (CI->isZero()) {
 
+                                // We either target store instructions in the form : store i32 0, i32* %var
+                                // and return instructions.
+                                unsigned Opcode = Inst.getOpcode();
                                 // We insert instructions in the following form :
                                 //
                                 // %0 = load i32, i32* %var, align 4
                                 // %1 = xor i32 %0, %0
                                 // store i32 %1, i32* %var, align 4
 
-                                Value *var_ptr = Inst.getOperand(1);
-                                Value *var_load = Builder.CreateAlignedLoad(var_ptr, SI->getAlignment());
-                                Value *NewValue = Builder.CreateAlignedStore(
-                                        Builder.CreateXor(var_load,
-                                            var_load), var_ptr, SI->getAlignment());
-                                ReplaceInstWithValue(BB.getInstList(), IIT, NewValue);
+                                if (Opcode == Instruction::Store) {
 
-                                // Consecutive zero assignments causes some instructions to be skipped.
-                                // The instruction iterator is decremented to avoid this.
-                                --IIT;
+                                    Value *var_ptr = Inst.getOperand(1);
+                                    Value *var_load = Builder.CreateAlignedLoad(var_ptr, SI->getAlignment());
+                                    Value *NewValue = Builder.CreateAlignedStore(
+                                            Builder.CreateXor(var_load,
+                                                var_load), var_ptr, SI->getAlignment());
+                                    ReplaceInstWithValue(BB.getInstList(), IIT, NewValue);
+
+                                    // Consecutive zero assignments causes some instructions to be skipped.
+                                    // The instruction iterator is decremented to avoid this.
+                                    --IIT;
+                                }
+
+                                // inconsequent transformation
+                                if (Opcode == Instruction::Ret) {
+                                    Value *one_1 = ConstantInt::get(CI->getContext(), llvm::APInt(32, 1, true));
+                                    Value *one_2 = ConstantInt::get(CI->getContext(), llvm::APInt(32, 1, true));
+                                    Value *NewValue = Builder.CreateRet(
+                                            Builder.CreateXor(one_1, one_2));
+                                    ReplaceInstWithValue(BB.getInstList(), IIT, NewValue);
+
+                                    // Without this, the pass will just perform the transformation forever
+                                    // TODO: find a way to put the xor result into a virtual register
+                                    IIT--;
+                                }
 
                                 modified = true;
                                 XORCount = XORCount + 1;

@@ -1,0 +1,9 @@
+*.swp
+**/CMakeCache.txt
+**/CMakeFiles
+**/cmake_install.cmake
+Tests/Output/
+Tests/lit.cfg
+**/Makefile
+lib/
+Utils/*.a
